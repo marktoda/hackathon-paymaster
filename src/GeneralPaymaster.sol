@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.12;
 
-/* solhint-disable reason-string */
-
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {ERC1155Supply} from "openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
@@ -12,7 +10,6 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import "./BasePaymaster.sol";
 import "./AaveFundsManager.sol";
 import "./interfaces/IOracle.sol";
-
 
 /// @notice GeneralPaymaster
 /// A shared public token-based paymaster that accepts token payments
@@ -51,13 +48,19 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
         unlockTokenDeposit();
     }
 
-    function depositETH(address token) external payable {
+    /// @notice Deposit ETH to participate as a Sub-Paymaster for the given token
+    /// @param token The token to accept in return for ETH
+    function depositSubpaymaster(address token) external payable {
         tokenETHBalance[token] += msg.value;
         _depositETH(msg.value);
         _mint(msg.sender, uint256(uint160(token)), msg.value, "");
     }
 
-    function withdrawLP(address token) external payable {
+    /// @notice Withdraw tokens and ETH as a sub-paymaster for the given token
+    /// @dev burns LP tokens for the given sub-paymaster pool and return
+    /// any accrued tokens and leftover ETH
+    /// @param token The token to withdraw sub-paymaster assets for
+    function withdrawSubpaymaster(address token) external payable {
         uint256 balance = IERC20(token).balanceOf(address(this));
         uint256 ethBalance = tokenETHBalance[token];
         uint256 liquidity = balanceOf(msg.sender, uint256(uint160(token)));
@@ -74,24 +77,19 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
         _withdrawETH(amountInETH, msg.sender);
     }
 
-    /**
-     * owner of the paymaster should add supported tokens
-     */
+    /// @notice owner of the paymaster should add supported tokens
     function addToken(IERC20 token, IOracle tokenPriceOracle) external onlyOwner {
         if (oracles[token] != NULL_ORACLE) revert TokenAlreadySet();
         oracles[token] = tokenPriceOracle;
     }
 
-    /**
-     * deposit tokens that a specific account can use to pay for gas.
-     * The sender must first approve this paymaster to withdraw these tokens (they are only withdrawn in this method).
-     * Note depositing the tokens is equivalent to transferring them to the "account" - only the account can later
-     *  use them - either as gas, or using withdrawTo()
-     *
-     * @param token the token to deposit.
-     * @param account the account to deposit for.
-     * @param amount the amount of token to deposit.
-     */
+    /// @notice deposit tokens that a specific account can use to pay for gas.
+    /// The sender must first approve this paymaster to withdraw these tokens (they are only withdrawn in this method).
+    /// Note depositing the tokens is equivalent to transferring them to the "account" - only the account can later
+    ///  use them - either as gas, or using withdrawTo()
+    /// @param token the token to deposit.
+    /// @param account the account to deposit for.
+    /// @param amount the amount of token to deposit.
     function addDepositFor(IERC20 token, address account, uint256 amount) external {
         //(sender must have approval for the paymaster)
         token.safeTransferFrom(msg.sender, address(this), amount);
@@ -102,38 +100,31 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
         }
     }
 
-    /**
-     * @return amount - the amount of given token deposited to the Paymaster.
-     * @return _unlockBlock - the block height at which the deposit can be withdrawn.
-     */
+    ///  @notice fetch deposit info for the given address
+    ///  @return amount - the amount of given token deposited to the Paymaster.
+    /// @return _unlockBlock - the block height at which the deposit can be withdrawn.
     function depositInfo(IERC20 token, address account) public view returns (uint256 amount, uint256 _unlockBlock) {
         amount = balances[token][account];
         _unlockBlock = unlockBlock[account];
     }
 
-    /**
-     * unlock deposit, so that it can be withdrawn.
-     * can't be called in the same block as withdrawTo()
-     */
+    /// @notice unlock deposit, so that it can be withdrawn.
+    /// can't be called in the same block as withdrawTo()
     function unlockTokenDeposit() public {
         unlockBlock[msg.sender] = block.number;
     }
 
-    /**
-     * lock the tokens deposited for this account so they can be used to pay for gas.
-     * after calling unlockTokenDeposit(), the account can't use this paymaster until the deposit is locked.
-     */
+    /// @notice lock the tokens deposited for this account so they can be used to pay for gas.
+    /// after calling unlockTokenDeposit(), the account can't use this paymaster until the deposit is locked.
     function lockTokenDeposit() public {
         unlockBlock[msg.sender] = 0;
     }
 
-    /**
-     * withdraw tokens.
-     * can only be called after unlock() is called in a previous block.
-     * @param token the token deposit to withdraw
-     * @param target address to send to
-     * @param amount amount to withdraw
-     */
+    /// @notice withdraw tokens.
+    /// can only be called after unlock() is called in a previous block.
+    /// @param token the token deposit to withdraw
+    /// @param target address to send to
+    /// @param amount amount to withdraw
     function withdrawTokensTo(IERC20 token, address target, uint256 amount) public {
         if (unlockBlock[msg.sender] == 0 || block.number <= unlockBlock[msg.sender]) {
             revert NotUnlocked();
@@ -142,13 +133,10 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
         token.safeTransfer(target, amount);
     }
 
-    /**
-     * translate the given eth value to token amount
-     * @param token the token to use
-     * @param ethBought the required eth value we want to "buy"
-     * @return requiredTokens the amount of tokens required to get this amount of eth
-     * TODO: use a TWAP oracle.
-     */
+    /// @notice translate the given eth value to token amount
+    /// @param token the token to use
+    /// @param ethBought the required eth value we want to "buy"
+    /// @return requiredTokens the amount of tokens required to get this amount of eth
     function getTokenValueOfEth(IERC20 token, uint256 ethBought)
         internal
         view
@@ -160,12 +148,10 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
         return oracle.getTokenValueOfEth(ethBought);
     }
 
-    /**
-     * Validate the request:
-     * The sender should have enough deposit to pay the max possible cost.
-     * Note that the sender's balance is not checked. If it fails to pay from its balance,
-     * this deposit will be used to compensate the paymaster for the transaction.
-     */
+    /// @notice Validate the request:
+    /// The sender should have enough deposit to pay the max possible cost.
+    /// Note that the sender's balance is not checked. If it fails to pay from its balance,
+    /// this deposit will be used to compensate the paymaster for the transaction.
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
         internal
         view
@@ -188,13 +174,11 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
         return (abi.encode(account, token, gasPriceUserOp, maxTokenCost, maxCost), 0);
     }
 
-    /**
-     * perform the post-operation to charge the sender for the gas.
-     * in normal mode, use transferFrom to withdraw enough tokens from the sender's balance.
-     * in case the transferFrom fails, the _postOp reverts and the entryPoint will call it again,
-     * this time in *postOpReverted* mode.
-     * In this mode, we use the deposit to pay (which we validated to be large enough)
-     */
+    /// @notice perform the post-operation to charge the sender for the gas.
+    /// in normal mode, use transferFrom to withdraw enough tokens from the sender's balance.
+    /// in case the transferFrom fails, the _postOp reverts and the entryPoint will call it again,
+    /// this time in *postOpReverted* mode.
+    /// In this mode, we use the deposit to pay (which we validated to be large enough)
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal override {
         (address account, IERC20 token, uint256 gasPricePostOp, uint256 maxTokenCost, uint256 maxCost) =
             abi.decode(context, (address, IERC20, uint256, uint256, uint256));
