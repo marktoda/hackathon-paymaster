@@ -221,6 +221,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
         }
         balances[token][address(this)] += actualTokenCost;
 
-        _deposit(token, actualTokenCost);
+        _deposit(address(token), actualTokenCost);
     }
 }
