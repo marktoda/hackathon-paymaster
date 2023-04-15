@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../core/BasePaymaster.sol";
+import "./AaveFundsManager.sol";
 import "./IOracle.sol";
 
 /**
@@ -24,7 +25,7 @@ import "./IOracle.sol";
  * It can only be used if it is "whitelisted" by the bundler.
  * (technically, it can be used by an "oracle" which returns a static value, without accessing any storage)
  */
-contract GeneralPaymaster is BasePaymaster, ERC1155 {
+contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     using UserOperationLib for UserOperation;
     using SafeERC20 for IERC20;
 
@@ -46,7 +47,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
 
     function depositETH(address token) external payable {
         tokenETHBalance[token] += msg.value;
-        entryPoint.depositTo{value: msg.value}(address(this));
+        _depositETH(msg.value);
         _mint(msg.sender, uint256(uint160(token)), msg.value);
     }
 
@@ -189,7 +190,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
             abi.decode(context, (address, IERC20, uint256, uint256, uint256));
         //use same conversion rate as used for validation.
         uint256 actualTokenCost = (actualGasCost + COST_OF_POST * gasPricePostOp) * maxTokenCost / maxCost;
-        
+
         tokenETHBalance[token] -= actualGasCost + COST_OF_POST * gasPricePostOp;
 
         if (mode != PostOpMode.postOpReverted) {
@@ -200,5 +201,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
             balances[token][account] -= actualTokenCost;
         }
         balances[token][address(this)] += actualTokenCost;
+
+        _deposit(token, actualTokenCost);
     }
 }
