@@ -3,6 +3,7 @@ pragma solidity ^0.8.12;
 
 /* solhint-disable reason-string */
 
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -23,9 +24,12 @@ import "./IOracle.sol";
  * It can only be used if it is "whitelisted" by the bundler.
  * (technically, it can be used by an "oracle" which returns a static value, without accessing any storage)
  */
-contract GeneralPaymaster is BasePaymaster {
+contract GeneralPaymaster is BasePaymaster, ERC1155 {
     using UserOperationLib for UserOperation;
     using SafeERC20 for IERC20;
+
+    // eth for gas by token
+    mapping(address token => uint256) public tokenETHBalance;
 
     //calculated cost of the postOp
     uint256 public constant COST_OF_POST = 35000;
@@ -38,6 +42,20 @@ contract GeneralPaymaster is BasePaymaster {
     constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) {
         //owner account is unblocked, to allow withdraw of paid tokens;
         unlockTokenDeposit();
+    }
+
+    function depositETH(address token) external payable {
+        tokenETHBalance[token] += msg.value;
+        _mint(msg.sender, uint256(uint160(token)), msg.value);
+    }
+
+    function withdrawLP(address token) external payable {
+        uint256 balance = ERC20(token).balanceOf(address(this));
+        uint256 liquidity = balanceOf(uint256(uint160(token)), msg.sender);
+
+        uint256 amount = liquidity * balance / totalSupply(uint256(uint160(token)));
+        _burn(msg.sender, uint256(uint160(token)), liquidity);
+        ERC20(token).safeTransfer(msg.sender, amount);
     }
 
     /**
