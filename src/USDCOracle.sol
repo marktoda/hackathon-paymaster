@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity =0.7.6;
 
-import {OracleLibrary} from "v3-periphery/contracts/libraries/OracleLibrary.sol";
+import {OracleLibrary} from "v3-periphery/libraries/OracleLibrary.sol";
 
-contract USDCOracle  {
-
+contract USDCOracle {
     // WETH-USDC pool
     address public immutable pool;
-    uint256 public constant secondsAgo = 12;
+    uint32 public constant secondsAgo = 12;
     address public immutable inputToken;
     address public immutable quoteToken;
-
 
     constructor(address _pool, address _inputToken, address _quoteToken) {
         // weth-usdc pool 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640;
@@ -21,10 +19,6 @@ contract USDCOracle  {
 
     function getTokenValueOfEth(uint256 ethOutput) external view returns (uint256 tokenInput) {
         (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, secondsAgo);
-        tokenInput = OracleLibrary.getQuoteAtTick(
-        arithmeticMeanTick,
-        ethOutput,
-        inputToken,
-        quoteToken);
+        tokenInput = OracleLibrary.getQuoteAtTick(arithmeticMeanTick, uint128(ethOutput), inputToken, quoteToken);
     }
 }

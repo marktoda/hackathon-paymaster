@@ -3,12 +3,12 @@ pragma solidity ^0.8.12;
 
 /* solhint-disable reason-string */
 
-import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
+import {ERC1155Supply} from "openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./BasePaymaster.sol";
-import "./FundsManager.sol";
+import "./AaveFundsManager.sol";
 import "./interfaces/IOracle.sol";
 
 /**
@@ -25,7 +25,7 @@ import "./interfaces/IOracle.sol";
  * It can only be used if it is "whitelisted" by the bundler.
  * (technically, it can be used by an "oracle" which returns a static value, without accessing any storage)
  */
-contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
+contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
     using UserOperationLib for UserOperation;
     using SafeERC20 for IERC20;
 
@@ -49,7 +49,8 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     mapping(IERC20 => mapping(address => uint256)) public balances;
     mapping(address => uint256) public unlockBlock;
 
-    constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) {
+    // constructor(address _manager, address _pool, address _weth, address _entrypoint) {
+    constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) AaveFundsManager(msg.sender, _entryPoint) {
         // owner account is unblocked, to allow withdraw of paid tokens;
         unlockTokenDeposit();
     }
@@ -61,12 +62,12 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     }
 
     function withdrawLP(address token) external payable {
-        uint256 balance = ERC20(token).balanceOf(address(this));
+        uint256 balance = IERC20(token).balanceOf(address(this));
         uint256 ethBalance = tokenETHBalance[token];
         uint256 liquidity = balanceOf(uint256(uint160(token)), msg.sender);
 
         uint256 amount = liquidity * balance / totalSupply(uint256(uint160(token)));
-        uint256 amountInEth = liquidity * ethBalance / totalSupply(uint256(uint160(token)));
+        uint256 amountInETH = liquidity * ethBalance / totalSupply(uint256(uint160(token)));
         _burn(msg.sender, uint256(uint160(token)), liquidity);
 
         // withdraw from aave

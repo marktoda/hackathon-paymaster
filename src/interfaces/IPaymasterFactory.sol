@@ -2,17 +2,9 @@
 pragma solidity ^0.8.12;
 
 import "./IEntryPoint.sol";
-interface IPaymasterFactory {
-    function deploy(
-        IEntryPoint entryPoint,
-        address owner,
-        address token
-    )
 
-    function deploy(
-        IEntryPoint entryPoint,
-        address owner,
-        address token,
-        uint256 minBalance
-    )
+interface IPaymasterFactory {
+    function deploy(IEntryPoint entryPoint, address owner, address token) external;
+
+    function deploy(IEntryPoint entryPoint, address owner, address token, uint256 minBalance) external;
 }

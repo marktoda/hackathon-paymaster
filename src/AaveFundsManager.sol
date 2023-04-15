@@ -13,16 +13,22 @@ import "./BasePaymaster.sol";
 import "./interfaces/IOracle.sol";
 
 abstract contract AaveFundsManager {
-    address public immutable manager;
-    IPool public immutable pool;
-    WETH public immutable weth;
-    IPaymaster private immutable paymaster;
+    error Unauthorized();
 
-    constructor(address _manager, address _pool, address _weth, address _paymaster) {
+    IPool public constant pool = IPool(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
+    WETH public constant weth = WETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
+    address public immutable manager;
+    IEntryPoint private immutable entrypoint;
+
+    modifier onlyManager() {
+        if (msg.sender != manager) revert Unauthorized();
+        _;
+    }
+
+    constructor(address _manager, address _entrypoint) {
         manager = _manager;
-        pool = IPool(_pool);
-        weth = WETH(_weth);
-        paymaster = IPaymaster(_paymaster);
+        entrypoint = IEntryPoint(_entrypoint);
     }
 
     function _deposit(IERC20 token, uint256 amount) internal {
@@ -55,6 +61,6 @@ abstract contract AaveFundsManager {
         // TODO: check they dont too much
         pool.withdraw(address(weth), amount, address(this));
         weth.withdraw(amount);
-        entryPoint.depositTo{value: amount}(address(this));
+        entrypoint.depositTo{value: amount}(address(this));
     }
 }
