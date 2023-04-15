@@ -52,11 +52,14 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
 
     function withdrawLP(address token) external payable {
         uint256 balance = ERC20(token).balanceOf(address(this));
+        uint256 ethBalance = tokenETHBalance[token];
         uint256 liquidity = balanceOf(uint256(uint160(token)), msg.sender);
 
         uint256 amount = liquidity * balance / totalSupply(uint256(uint160(token)));
+        uint256 amountInEth = liquidity * ethBalance / totalSupply(uint256(uint160(token)));
         _burn(msg.sender, uint256(uint160(token)), liquidity);
         ERC20(token).safeTransfer(msg.sender, amount);
+        withdrawTo(msg.sender, amountInEth);
     }
 
     /**
@@ -186,6 +189,9 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
             abi.decode(context, (address, IERC20, uint256, uint256, uint256));
         //use same conversion rate as used for validation.
         uint256 actualTokenCost = (actualGasCost + COST_OF_POST * gasPricePostOp) * maxTokenCost / maxCost;
+        
+        tokenETHBalance[token] -= actualGasCost + COST_OF_POST * gasPricePostOp;
+
         if (mode != PostOpMode.postOpReverted) {
             // attempt to pay with tokens:
             token.safeTransferFrom(account, address(this), actualTokenCost);
@@ -193,6 +199,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
             //in case above transferFrom failed, pay with deposit:
             balances[token][account] -= actualTokenCost;
         }
-        balances[token][owner()] += actualTokenCost;
+        balances[token][address(this)] += actualTokenCost;
     }
 }
