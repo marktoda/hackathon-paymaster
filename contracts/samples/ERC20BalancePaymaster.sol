@@ -51,6 +51,10 @@ contract ERC721OwnershipPaymaster is Ownable, BasePaymaster, ERC1155 {
         unlockTokenDeposit();
     }
 
+    function updateMinBalanceRequired(uint256 _minBalance) external onlyOwner {
+        minBalance = _minBalance;
+    }
+
     function depositETH(address token) external payable {
         tokenETHBalance[token] += msg.value;
         entryPoint.depositTo{value: msg.value}(address(this));
