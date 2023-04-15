@@ -39,10 +39,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
     mapping(IERC20 => mapping(address => uint256)) public balances;
     mapping(address => uint256) public unlockBlock;
 
-    constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) {
-        //owner account is unblocked, to allow withdraw of paid tokens;
-        unlockTokenDeposit();
-    }
+    constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) {}
 
     function depositETH(address token) external payable {
         tokenETHBalance[token] += msg.value;
@@ -82,9 +79,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
         token.safeTransferFrom(msg.sender, address(this), amount);
         require(oracles[token] != NULL_ORACLE, "unsupported token");
         balances[token][account] += amount;
-        if (msg.sender == account) {
-            lockTokenDeposit();
-        }
     }
 
     /**
@@ -93,23 +87,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
      */
     function depositInfo(IERC20 token, address account) public view returns (uint256 amount, uint256 _unlockBlock) {
         amount = balances[token][account];
-        _unlockBlock = unlockBlock[account];
-    }
-
-    /**
-     * unlock deposit, so that it can be withdrawn.
-     * can't be called in the same block as withdrawTo()
-     */
-    function unlockTokenDeposit() public {
-        unlockBlock[msg.sender] = block.number;
-    }
-
-    /**
-     * lock the tokens deposited for this account so they can be used to pay for gas.
-     * after calling unlockTokenDeposit(), the account can't use this paymaster until the deposit is locked.
-     */
-    function lockTokenDeposit() public {
-        unlockBlock[msg.sender] = 0;
     }
 
     /**
@@ -120,10 +97,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
      * @param amount amount to withdraw
      */
     function withdrawTokensTo(IERC20 token, address target, uint256 amount) public {
-        require(
-            unlockBlock[msg.sender] != 0 && block.number > unlockBlock[msg.sender],
-            "DepositPaymaster: must unlockTokenDeposit"
-        );
         balances[token][msg.sender] -= amount;
         token.safeTransfer(target, amount);
     }
@@ -169,7 +142,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
         uint256 maxTokenCost = getTokenValueOfEth(token, maxCost);
         uint256 gasPriceUserOp = userOp.gasPrice();
         require(tokenETHBalance[token] >= maxCost, "DepositPaymaster: not enough ETH in paymaster");
-        require(unlockBlock[account] == 0, "DepositPaymaster: deposit not locked");
         require(balances[token][account] >= maxTokenCost, "DepositPaymaster: deposit too low");
         return (abi.encode(account, token, gasPriceUserOp, maxTokenCost, maxCost), 0);
     }
