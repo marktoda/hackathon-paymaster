@@ -9,7 +9,7 @@ import "../interfaces/IPaymaster.sol";
 import "../interfaces/IPaymasterFactory.sol";
 
 /**
- * Factory for creating ERC721 ownership paymasters.
+ * Factory for creating paymasters.
  */
 
 contract PaymasterFactory is IPaymasterFactory {
