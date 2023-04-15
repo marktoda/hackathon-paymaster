@@ -74,7 +74,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
 
         // try to withdraw from aave
         // if not enough, then withdraw from entrypoint
-        _withdrawETH(msg.sender, amountInEth);
+        _withdrawETH(amountInETH, msg.sender);
     }
 
     /**
