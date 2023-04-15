@@ -44,7 +44,7 @@ abstract contract AaveFundsManager {
     function _withdraw(address token, uint256 amount, address to) internal {
         // TODO: only if aave supports it
         // TODO: if aave doesnt support it assume we have balance locally
-        pool.withdraw(address(token), amount, to);
+        pool.withdraw(token, amount, to);
     }
 
     function _withdrawETH(uint256 amount, address to) internal {

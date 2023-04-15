@@ -59,8 +59,13 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
         uint256 amount = liquidity * balance / totalSupply(uint256(uint160(token)));
         uint256 amountInEth = liquidity * ethBalance / totalSupply(uint256(uint160(token)));
         _burn(msg.sender, uint256(uint160(token)), liquidity);
-        ERC20(token).safeTransfer(msg.sender, amount);
-        withdrawTo(msg.sender, amountInEth);
+
+        // withdraw from aave
+        _withdraw(token, msg.sender, amount);
+
+        // try to withdraw from aave
+        // if not enough, then withdraw from entrypoint
+        _withdrawETH(msg.sender, amountInEth);
     }
 
     /**
