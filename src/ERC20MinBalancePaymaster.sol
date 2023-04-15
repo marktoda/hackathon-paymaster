@@ -12,7 +12,7 @@ import "./GeneralPaymaster.sol";
 import "./AaveFundsManager.sol";
 import "./interfaces/IOracle.sol";
 
-contract ERC721OwnershipPaymaster is GeneralPaymaster, Ownable {
+contract ERC20MinBalancePaymaster is GeneralPaymaster, Ownable {
     IERC20 public membershipToken;
     uint256 public minBalance;
 
