@@ -4,6 +4,7 @@ pragma solidity ^0.8.12;
 /* solhint-disable reason-string */
 
 import {ERC1155Supply} from "openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -50,7 +51,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
     mapping(address => uint256) public unlockBlock;
 
     // constructor(address _manager, address _pool, address _weth, address _entrypoint) {
-    constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) AaveFundsManager(msg.sender, _entryPoint) {
+    constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) AaveFundsManager(msg.sender, _entryPoint) ERC1155("") {
         // owner account is unblocked, to allow withdraw of paid tokens;
         unlockTokenDeposit();
     }
@@ -58,13 +59,13 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
     function depositETH(address token) external payable {
         tokenETHBalance[token] += msg.value;
         _depositETH(msg.value);
-        _mint(msg.sender, uint256(uint160(token)), msg.value);
+        _mint(msg.sender, uint256(uint160(token)), msg.value, "");
     }
 
     function withdrawLP(address token) external payable {
         uint256 balance = IERC20(token).balanceOf(address(this));
         uint256 ethBalance = tokenETHBalance[token];
-        uint256 liquidity = balanceOf(uint256(uint160(token)), msg.sender);
+        uint256 liquidity = balanceOf(msg.sender, uint256(uint160(token)));
 
         uint256 amount = liquidity * balance / totalSupply(uint256(uint160(token)));
         uint256 amountInETH = liquidity * ethBalance / totalSupply(uint256(uint160(token)));
@@ -186,7 +187,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
         address account = userOp.getSender();
         uint256 maxTokenCost = getTokenValueOfEth(token, maxCost);
         uint256 gasPriceUserOp = userOp.gasPrice();
-        if (tokenETHBalance[token] < maxCost) revert InsufficientETH();
+        if (tokenETHBalance[address(token)] < maxCost) revert InsufficientETH();
         if (unlockBlock[account] != 0) revert NotLocked();
         if (balances[token][account] < maxTokenCost) revert InsufficientDeposit();
         return (abi.encode(account, token, gasPriceUserOp, maxTokenCost, maxCost), 0);
@@ -202,10 +203,10 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal override {
         (address account, IERC20 token, uint256 gasPricePostOp, uint256 maxTokenCost, uint256 maxCost) =
             abi.decode(context, (address, IERC20, uint256, uint256, uint256));
-        //use same conversion rate as used for validation.
+        // use same conversion rate as used for validation.
         uint256 actualTokenCost = (actualGasCost + COST_OF_POST * gasPricePostOp) * maxTokenCost / maxCost;
 
-        tokenETHBalance[token] -= actualGasCost + COST_OF_POST * gasPricePostOp;
+        tokenETHBalance[address(token)] -= actualGasCost + COST_OF_POST * gasPricePostOp;
 
         if (mode != PostOpMode.postOpReverted) {
             // attempt to pay with tokens:

@@ -16,7 +16,7 @@ abstract contract AaveFundsManager {
     error Unauthorized();
 
     IPool public constant pool = IPool(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
-    WETH public constant weth = WETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    WETH public constant weth = WETH(payable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
 
     address public immutable manager;
     IEntryPoint private immutable entrypoint;
@@ -26,9 +26,9 @@ abstract contract AaveFundsManager {
         _;
     }
 
-    constructor(address _manager, address _entrypoint) {
+    constructor(address _manager, IEntryPoint _entrypoint) {
         manager = _manager;
-        entrypoint = IEntryPoint(_entrypoint);
+        entrypoint = _entrypoint;
     }
 
     function _deposit(IERC20 token, uint256 amount) internal {
@@ -36,7 +36,7 @@ abstract contract AaveFundsManager {
         if (token.allowance(address(this), address(pool)) < amount) {
             token.approve(address(pool), type(uint256).max);
         }
-        pool.supply(token, amount, address(this), 0);
+        pool.supply(address(token), amount, address(this), 0);
     }
 
     function _depositETH(uint256 amount) internal {
