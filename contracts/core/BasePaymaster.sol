@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.12;
 
-
 /* solhint-disable reason-string */
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -15,8 +14,7 @@ import "./Helpers.sol";
  * validates that the postOp is called only by the entryPoint
  */
 abstract contract BasePaymaster is IPaymaster, Ownable {
-
-    IEntryPoint immutable public entryPoint;
+    IEntryPoint public immutable entryPoint;
 
     constructor(IEntryPoint _entryPoint) {
         entryPoint = _entryPoint;
@@ -24,13 +22,18 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
 
     /// @inheritdoc IPaymaster
     function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
-    external override returns (bytes memory context, uint256 validationData) {
-         _requireFromEntryPoint();
+        external
+        override
+        returns (bytes memory context, uint256 validationData)
+    {
+        _requireFromEntryPoint();
         return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
     }
 
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
-    internal virtual returns (bytes memory context, uint256 validationData);
+        internal
+        virtual
+        returns (bytes memory context, uint256 validationData);
 
     /// @inheritdoc IPaymaster
     function postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) external override {
@@ -51,8 +54,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
      * @param actualGasCost - actual gas used so far (without this postOp call).
      */
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal virtual {
-
-        (mode,context,actualGasCost); // unused params
+        (mode, context, actualGasCost); // unused params
         // subclass must override this method if validatePaymasterUserOp returns a context
         revert("must override");
     }
@@ -61,7 +63,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
      * add a deposit for this paymaster, used for paying for transaction fees
      */
     function deposit() public payable {
-        entryPoint.depositTo{value : msg.value}(address(this));
+        entryPoint.depositTo{value: msg.value}(address(this));
     }
 
     /**
@@ -77,8 +79,9 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
      * This method can also carry eth value to add to the current stake.
      * @param unstakeDelaySec - the unstake delay for this paymaster. Can only be increased.
      */
+
     function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
-        entryPoint.addStake{value : msg.value}(unstakeDelaySec);
+        entryPoint.addStake{value: msg.value}(unstakeDelaySec);
     }
 
     /**

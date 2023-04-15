@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import "../../interfaces/IAggregator.sol";
 import "../../interfaces/IEntryPoint.sol";
-import {BLSOpen} from  "./lib/BLSOpen.sol";
+import {BLSOpen} from "./lib/BLSOpen.sol";
 import "./IBLSAccount.sol";
 import "./BLSHelper.sol";
 
@@ -16,8 +16,8 @@ contract BLSSignatureAggregator is IAggregator {
 
     bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
 
-     //copied from BLS.sol
-    uint256 public  constant N = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+    //copied from BLS.sol
+    uint256 public constant N = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
     /**
      * @return publicKey - the public key from a BLS keypair the Aggregator will use to verify this UserOp;
@@ -29,7 +29,7 @@ contract BLSSignatureAggregator is IAggregator {
         if (initCode.length > 0) {
             publicKey = getTrailingPublicKey(initCode);
         } else {
-            return IBLSAccount(userOp.sender).getBlsPublicKey{gas : 50000}();
+            return IBLSAccount(userOp.sender).getBlsPublicKey{gas: 50000}();
         }
     }
 
@@ -37,12 +37,12 @@ contract BLSSignatureAggregator is IAggregator {
      * return the trailing 4 words of input data
      */
     function getTrailingPublicKey(bytes memory data) public pure returns (uint256[4] memory publicKey) {
-        uint len = data.length;
+        uint256 len = data.length;
         require(len > 32 * 4, "data too short for sig");
 
         /* solhint-disable-next-line no-inline-assembly */
         assembly {
-        // actual buffer starts at data+32, so last 128 bytes start at data+32+len-128 = data+len-96
+            // actual buffer starts at data+32, so last 128 bytes start at data+32+len-128 = data+len-96
             let ofs := sub(add(data, len), 96)
             mstore(publicKey, mload(ofs))
             mstore(add(publicKey, 32), mload(add(ofs, 32)))
@@ -52,16 +52,14 @@ contract BLSSignatureAggregator is IAggregator {
     }
 
     /// @inheritdoc IAggregator
-    function validateSignatures(UserOperation[] calldata userOps, bytes calldata signature)
-    external view override {
+    function validateSignatures(UserOperation[] calldata userOps, bytes calldata signature) external view override {
         require(signature.length == 64, "BLS: invalid signature");
         (uint256[2] memory blsSignature) = abi.decode(signature, (uint256[2]));
 
-        uint userOpsLen = userOps.length;
+        uint256 userOpsLen = userOps.length;
         uint256[4][] memory blsPublicKeys = new uint256[4][](userOpsLen);
         uint256[2][] memory messages = new uint256[2][](userOpsLen);
         for (uint256 i = 0; i < userOpsLen; i++) {
-
             UserOperation memory userOp = userOps[i];
             blsPublicKeys[i] = getUserOpPublicKey(userOp);
 
@@ -76,7 +74,8 @@ contract BLSSignatureAggregator is IAggregator {
      *  (slightly less efficient, since it uses memory userOp)
      */
     function internalUserOpHash(UserOperation memory userOp) internal pure returns (bytes32) {
-        return keccak256(abi.encode(
+        return keccak256(
+            abi.encode(
                 userOp.sender,
                 userOp.nonce,
                 keccak256(userOp.initCode),
@@ -87,7 +86,8 @@ contract BLSSignatureAggregator is IAggregator {
                 userOp.maxFeePerGas,
                 userOp.maxPriorityFeePerGas,
                 keccak256(userOp.paymasterAndData)
-            ));
+            )
+        );
     }
 
     /**
@@ -99,7 +99,11 @@ contract BLSSignatureAggregator is IAggregator {
         return _userOpToMessage(userOp, publicKeyHash);
     }
 
-    function _userOpToMessage(UserOperation memory userOp, bytes32 publicKeyHash) internal view returns (uint256[2] memory) {
+    function _userOpToMessage(UserOperation memory userOp, bytes32 publicKeyHash)
+        internal
+        view
+        returns (uint256[2] memory)
+    {
         bytes32 userOpHash = _getUserOpHash(userOp, publicKeyHash);
         return BLSOpen.hashToPoint(BLS_DOMAIN, abi.encodePacked(userOpHash));
     }
@@ -114,7 +118,7 @@ contract BLSSignatureAggregator is IAggregator {
         return keccak256(abi.encode(internalUserOpHash(userOp), publicKeyHash, address(this), block.chainid));
     }
 
-    function _getPublicKeyHash(uint256[4] memory publicKey) internal pure returns(bytes32) {
+    function _getPublicKeyHash(uint256[4] memory publicKey) internal pure returns (bytes32) {
         return keccak256(abi.encode(publicKey));
     }
     /**
@@ -125,8 +129,8 @@ contract BLSSignatureAggregator is IAggregator {
      * @return sigForUserOp the value to put into the signature field of the userOp when calling handleOps.
      *    (usually empty, unless account and aggregator support some kind of "multisig"
      */
-    function validateUserOpSignature(UserOperation calldata userOp)
-    external view returns (bytes memory sigForUserOp) {
+
+    function validateUserOpSignature(UserOperation calldata userOp) external view returns (bytes memory sigForUserOp) {
         uint256[2] memory signature = abi.decode(userOp.signature, (uint256[2]));
         uint256[4] memory pubkey = getUserOpPublicKey(userOp);
         uint256[2] memory message = _userOpToMessage(userOp, _getPublicKeyHash(pubkey));
@@ -135,7 +139,6 @@ contract BLSSignatureAggregator is IAggregator {
         return "";
     }
 
-
     /**
      * aggregate multiple signatures into a single value.
      * This method is called off-chain to calculate the signature to pass with handleOps()
@@ -143,9 +146,13 @@ contract BLSSignatureAggregator is IAggregator {
      * @param userOps array of UserOperations to collect the signatures from.
      * @return aggregatedSignature the aggregated signature
      */
-    function aggregateSignatures(UserOperation[] calldata userOps) external pure returns (bytes memory aggregatedSignature) {
+    function aggregateSignatures(UserOperation[] calldata userOps)
+        external
+        pure
+        returns (bytes memory aggregatedSignature)
+    {
         BLSHelper.XY[] memory points = new BLSHelper.XY[](userOps.length);
-        for (uint i = 0; i < points.length; i++) {
+        for (uint256 i = 0; i < points.length; i++) {
             (uint256 x, uint256 y) = abi.decode(userOps[i].signature, (uint256, uint256));
             points[i] = BLSHelper.XY(x, y);
         }
@@ -159,6 +166,6 @@ contract BLSSignatureAggregator is IAggregator {
      * signature aggregator, which doesn't support unstaking.
      */
     function addStake(IEntryPoint entryPoint, uint32 delay) external payable {
-        entryPoint.addStake{value : msg.value}(delay);
+        entryPoint.addStake{value: msg.value}(delay);
     }
 }

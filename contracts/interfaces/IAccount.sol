@@ -4,7 +4,6 @@ pragma solidity ^0.8.12;
 import "./UserOperation.sol";
 
 interface IAccount {
-
     /**
      * Validate user's signature and nonce
      * the entryPoint will make the call to the recipient only if this validation call returns successfully.
@@ -30,5 +29,6 @@ interface IAccount {
      *      Note that the validation code cannot use block.timestamp (or block.number) directly.
      */
     function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
-    external returns (uint256 validationData);
+        external
+        returns (uint256 validationData);
 }

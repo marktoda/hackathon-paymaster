@@ -11,7 +11,6 @@ import "../interfaces/IStakeManager.sol";
  * stake is value locked for at least "unstakeDelay" by a paymaster.
  */
 abstract contract StakeManager is IStakeManager {
-
     /// maps paymaster to their deposits and stakes
     mapping(address => DepositInfo) public deposits;
 
@@ -64,13 +63,7 @@ abstract contract StakeManager is IStakeManager {
         uint256 stake = info.stake + msg.value;
         require(stake > 0, "no stake specified");
         require(stake <= type(uint112).max, "stake overflow");
-        deposits[msg.sender] = DepositInfo(
-            info.deposit,
-            true,
-            uint112(stake),
-            unstakeDelaySec,
-            0
-        );
+        deposits[msg.sender] = DepositInfo(info.deposit, true, uint112(stake), unstakeDelaySec, 0);
         emit StakeLocked(msg.sender, stake, unstakeDelaySec);
     }
 
@@ -88,7 +81,6 @@ abstract contract StakeManager is IStakeManager {
         emit StakeUnlocked(msg.sender, withdrawTime);
     }
 
-
     /**
      * withdraw from the (unlocked) stake.
      * must first call unlockStake and wait for the unstakeDelay to pass
@@ -104,7 +96,7 @@ abstract contract StakeManager is IStakeManager {
         info.withdrawTime = 0;
         info.stake = 0;
         emit StakeWithdrawn(msg.sender, withdrawAddress, stake);
-        (bool success,) = withdrawAddress.call{value : stake}("");
+        (bool success,) = withdrawAddress.call{value: stake}("");
         require(success, "failed to withdraw stake");
     }
 
@@ -118,7 +110,7 @@ abstract contract StakeManager is IStakeManager {
         require(withdrawAmount <= info.deposit, "Withdraw amount too large");
         info.deposit = uint112(info.deposit - withdrawAmount);
         emit Withdrawn(msg.sender, withdrawAddress, withdrawAmount);
-        (bool success,) = withdrawAddress.call{value : withdrawAmount}("");
+        (bool success,) = withdrawAddress.call{value: withdrawAmount}("");
         require(success, "failed to withdraw");
     }
 }

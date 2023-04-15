@@ -7,36 +7,17 @@ pragma solidity ^0.8.12;
  * stake is value locked for at least "unstakeDelay" by the staked entity.
  */
 interface IStakeManager {
+    event Deposited(address indexed account, uint256 totalDeposit);
 
-    event Deposited(
-        address indexed account,
-        uint256 totalDeposit
-    );
-
-    event Withdrawn(
-        address indexed account,
-        address withdrawAddress,
-        uint256 amount
-    );
+    event Withdrawn(address indexed account, address withdrawAddress, uint256 amount);
 
     /// Emitted when stake or unstake delay are modified
-    event StakeLocked(
-        address indexed account,
-        uint256 totalStaked,
-        uint256 unstakeDelaySec
-    );
+    event StakeLocked(address indexed account, uint256 totalStaked, uint256 unstakeDelaySec);
 
     /// Emitted once a stake is scheduled for withdrawal
-    event StakeUnlocked(
-        address indexed account,
-        uint256 withdrawTime
-    );
+    event StakeUnlocked(address indexed account, uint256 withdrawTime);
 
-    event StakeWithdrawn(
-        address indexed account,
-        address withdrawAddress,
-        uint256 amount
-    );
+    event StakeWithdrawn(address indexed account, address withdrawAddress, uint256 amount);
 
     /**
      * @param deposit the entity's deposit

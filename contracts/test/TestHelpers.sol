@@ -4,12 +4,15 @@ pragma solidity ^0.8.12;
 import "../core/Helpers.sol";
 
 contract TestHelpers {
-
-    function parseValidationData(uint validationData) public pure returns (ValidationData memory) {
+    function parseValidationData(uint256 validationData) public pure returns (ValidationData memory) {
         return _parseValidationData(validationData);
     }
 
-    function intersectTimeRange(uint256 validationData, uint256 paymasterValidationData) public pure returns (ValidationData memory) {
+    function intersectTimeRange(uint256 validationData, uint256 paymasterValidationData)
+        public
+        pure
+        returns (ValidationData memory)
+    {
         return _intersectTimeRange(validationData, paymasterValidationData);
     }
 
