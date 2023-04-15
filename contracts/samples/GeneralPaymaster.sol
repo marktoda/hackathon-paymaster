@@ -46,6 +46,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
 
     function depositETH(address token) external payable {
         tokenETHBalance[token] += msg.value;
+        entryPoint.depositTo{value: msg.value}(address(this));
         _mint(msg.sender, uint256(uint160(token)), msg.value);
     }
 
@@ -132,6 +133,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
      * @param token the token to use
      * @param ethBought the required eth value we want to "buy"
      * @return requiredTokens the amount of tokens required to get this amount of eth
+     * TODO: use a TWAP oracle.
      */
     function getTokenValueOfEth(IERC20 token, uint256 ethBought)
         internal
@@ -166,6 +168,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155 {
         address account = userOp.getSender();
         uint256 maxTokenCost = getTokenValueOfEth(token, maxCost);
         uint256 gasPriceUserOp = userOp.gasPrice();
+        require(tokenETHBalance[token] >= maxCost, "DepositPaymaster: not enough ETH in paymaster");
         require(unlockBlock[account] == 0, "DepositPaymaster: deposit not locked");
         require(balances[token][account] >= maxTokenCost, "DepositPaymaster: deposit too low");
         return (abi.encode(account, token, gasPriceUserOp, maxTokenCost, maxCost), 0);
