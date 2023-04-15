@@ -15,6 +15,7 @@ import "./interfaces/IOracle.sol";
 
 abstract contract AaveFundsManager {
     using SafeTransferLib for ERC20;
+
     error Unauthorized();
 
     IPool public constant pool = IPool(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
