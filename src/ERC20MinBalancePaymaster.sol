@@ -9,10 +9,11 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 import "./GeneralPaymaster.sol";
+import "./BasePaymaster.sol";
 import "./AaveFundsManager.sol";
 import "./interfaces/IOracle.sol";
 
-contract ERC20MinBalancePaymaster is GeneralPaymaster, Ownable {
+contract ERC20MinBalancePaymaster is GeneralPaymaster, BasePaymaster, Ownable {
     IERC20 public membershipToken;
     uint256 public minBalance;
 
@@ -32,7 +33,7 @@ contract ERC20MinBalancePaymaster is GeneralPaymaster, Ownable {
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
         internal
         view
-        override
+        override(BasePaymaster)
         returns (bytes memory context, uint256 validationData)
     {
         (userOpHash);

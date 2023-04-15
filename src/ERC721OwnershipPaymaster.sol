@@ -10,10 +10,11 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 import "./GeneralPaymaster.sol";
+import "./BasePaymaster.sol";
 import "./AaveFundsManager.sol";
 import "./interfaces/IOracle.sol";
 
-contract ERC721OwnershipPaymaster is GeneralPaymaster, Ownable {
+contract ERC721OwnershipPaymaster is GeneralPaymaster, BasePaymaster, Ownable {
     IERC721 public membershipToken;
 
     error NotAMember();
@@ -31,7 +32,7 @@ contract ERC721OwnershipPaymaster is GeneralPaymaster, Ownable {
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
         internal
         view
-        override
+        override(BasePaymaster)
         returns (bytes memory context, uint256 validationData)
     {
         (userOpHash);
