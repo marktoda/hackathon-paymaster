@@ -62,19 +62,18 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
     /// @param token The token to withdraw sub-paymaster assets for
     function withdrawSubpaymaster(address token) external payable {
         uint256 balance = IERC20(token).balanceOf(address(this));
-        uint256 ethBalance = tokenETHBalance[token];
         uint256 liquidity = balanceOf(msg.sender, uint256(uint160(token)));
+        uint256 tokenId = uint256(uint160(token));
+        uint256 lpSupply = totalSupply(tokenId);
 
-        uint256 amount = liquidity.mulDivDown(balance, totalSupply(uint256(uint160(token))));
-        uint256 amountInETH = liquidity.mulDivDown(ethBalance, totalSupply(uint256(uint160(token))));
-        _burn(msg.sender, uint256(uint160(token)), liquidity);
+        _burn(msg.sender, tokenId, liquidity);
 
         // withdraw from aave
-        _withdraw(token, amount, msg.sender);
+        _withdraw(token, liquidity.mulDivDown(balance, lpSupply), msg.sender);
 
         // try to withdraw from aave
         // if not enough, then withdraw from entrypoint
-        _withdrawETH(amountInETH, msg.sender);
+        _withdrawETH(liquidity.mulDivDown(tokenETHBalance[token], lpSupply), msg.sender);
     }
 
     /// @notice owner of the paymaster should add supported tokens
