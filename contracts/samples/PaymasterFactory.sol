@@ -5,6 +5,7 @@ pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./ERC721OwnershipPaymaster.sol";
+import "./ERC20BalancePaymaster.sol";
 import "../interfaces/IPaymaster.sol";
 import "../interfaces/IPaymasterFactory.sol";
 
@@ -27,7 +28,7 @@ contract PaymasterFactory is IPaymasterFactory {
         address requiredToken,
         uint256 minBalance
     ) external override returns (address paymaster) {
-        return address(new ERC721OwnershipPaymaster{salt: keccak256(abi.encode(address(entryPoint, owner, requiredToken)))}(entryPoint, owner, requiredToken, minBalance));
+        return address(new ERC20BalancePaymaster{salt: keccak256(abi.encode(address(entryPoint, owner, requiredToken)))}(entryPoint, owner, requiredToken, minBalance));
     }
 }
 
