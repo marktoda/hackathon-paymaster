@@ -1,7 +1,7 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["node_modules"]
+libs = ["node_modules", "lib"]
 remappings = [
     "@ensdomains/=node_modules/@ensdomains/",
     "@gnosis.pm/=node_modules/@gnosis.pm/",

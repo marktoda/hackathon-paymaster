@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.12;
+pragma solidity =0.7.6;
 
-import {IOracle} from "./IOracle.sol";
+import {OracleLibrary} from "v3-periphery/contracts/libraries/OracleLibrary.sol";
 
-// todo foundry
-// add oracle library
-
-
-contract USDCOracle is IOracle {
+contract USDCOracle  {
 
     // WETH-USDC pool
     address public immutable pool;
