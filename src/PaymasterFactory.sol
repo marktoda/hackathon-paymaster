@@ -3,11 +3,11 @@ pragma solidity ^0.8.12;
 
 /* solhint-disable reason-string */
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import "./ERC721OwnershipPaymaster.sol";
 import "./ERC20BalancePaymaster.sol";
-import "../interfaces/IPaymaster.sol";
-import "../interfaces/IPaymasterFactory.sol";
+import "./interfaces/IPaymaster.sol";
+import "./interfaces/IPaymasterFactory.sol";
 
 /**
  * Factory for creating paymasters.
