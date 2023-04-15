@@ -37,6 +37,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     error InsufficientETH();
     error NotLocked();
     error InsufficientDeposit();
+    error PostOpError();
 
     // eth for gas by token
     mapping(address token => uint256) public tokenETHBalance;
@@ -46,8 +47,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
 
     IOracle private constant NULL_ORACLE = IOracle(address(0));
     mapping(IERC20 => IOracle) public oracles;
-    mapping(IERC20 => mapping(address => uint256)) public balances;
-    mapping(address => uint256) public unlockBlock;
 
     constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) {}
 
@@ -80,43 +79,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     function addToken(IERC20 token, IOracle tokenPriceOracle) external onlyOwner {
         if (oracles[token] != NULL_ORACLE) revert TokenAlreadySet();
         oracles[token] = tokenPriceOracle;
-    }
-
-    /**
-     * deposit tokens that a specific account can use to pay for gas.
-     * The sender must first approve this paymaster to withdraw these tokens (they are only withdrawn in this method).
-     * Note depositing the tokens is equivalent to transferring them to the "account" - only the account can later
-     *  use them - either as gas, or using withdrawTo()
-     *
-     * @param token the token to deposit.
-     * @param account the account to deposit for.
-     * @param amount the amount of token to deposit.
-     */
-    function addDepositFor(IERC20 token, address account, uint256 amount) external {
-        //(sender must have approval for the paymaster)
-        token.safeTransferFrom(msg.sender, address(this), amount);
-        if (oracles[token] == NULL_ORACLE) revert UnsupportedToken();
-        balances[token][account] += amount;
-    }
-
-    /**
-     * @return amount - the amount of given token deposited to the Paymaster.
-     * @return _unlockBlock - the block height at which the deposit can be withdrawn.
-     */
-    function depositInfo(IERC20 token, address account) public view returns (uint256 amount, uint256 _unlockBlock) {
-        amount = balances[token][account];
-    }
-
-    /**
-     * withdraw tokens.
-     * can only be called after unlock() is called in a previous block.
-     * @param token the token deposit to withdraw
-     * @param target address to send to
-     * @param amount amount to withdraw
-     */
-    function withdrawTokensTo(IERC20 token, address target, uint256 amount) public {
-        balances[token][msg.sender] -= amount;
-        token.safeTransfer(target, amount);
     }
 
     /**
@@ -160,7 +122,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
         uint256 maxTokenCost = getTokenValueOfEth(token, maxCost);
         uint256 gasPriceUserOp = userOp.gasPrice();
         if (tokenETHBalance[token] < maxCost) revert InsufficientETH();
-        if (balances[token][account] < maxTokenCost) revert InsufficientDeposit();
+        if (token.balanceOf(this) < maxTokenCost) revert InsufficientDeposit();
         return (abi.encode(account, token, gasPriceUserOp, maxTokenCost, maxCost), 0);
     }
 
@@ -183,11 +145,9 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
             // attempt to pay with tokens:
             token.safeTransferFrom(account, address(this), actualTokenCost);
         } else {
-            //in case above transferFrom failed, pay with deposit:
-            balances[token][account] -= actualTokenCost;
+            // TODO: what does ERC4337 spec say about the error code here?
+            revert PostOpError();
         }
-        balances[token][address(this)] += actualTokenCost;
-
         _deposit(token, actualTokenCost);
     }
 }
