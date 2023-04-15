@@ -51,7 +51,11 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
     mapping(address => uint256) public unlockBlock;
 
     // constructor(address _manager, address _pool, address _weth, address _entrypoint) {
-    constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) AaveFundsManager(msg.sender, _entryPoint) ERC1155("") {
+    constructor(IEntryPoint _entryPoint)
+        BasePaymaster(_entryPoint)
+        AaveFundsManager(msg.sender, _entryPoint)
+        ERC1155("")
+    {
         // owner account is unblocked, to allow withdraw of paid tokens;
         unlockTokenDeposit();
     }
