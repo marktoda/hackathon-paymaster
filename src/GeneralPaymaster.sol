@@ -50,7 +50,6 @@ contract GeneralPaymaster is BasePaymaster, ERC1155Supply, AaveFundsManager {
     mapping(IERC20 => mapping(address => uint256)) public balances;
     mapping(address => uint256) public unlockBlock;
 
-    // constructor(address _manager, address _pool, address _weth, address _entrypoint) {
     constructor(IEntryPoint _entryPoint)
         BasePaymaster(_entryPoint)
         AaveFundsManager(msg.sender, _entryPoint)
