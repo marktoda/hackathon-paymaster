@@ -29,10 +29,19 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     using UserOperationLib for UserOperation;
     using SafeERC20 for IERC20;
 
+    error TokenAlreadySet();
+    error UnsupportedToken();
+    error NotUnlocked();
+    error GasTooLow();
+    error TokenNotSpecified();
+    error InsufficientETH();
+    error NotLocked();
+    error InsufficientDeposit();
+
     // eth for gas by token
     mapping(address token => uint256) public tokenETHBalance;
 
-    //calculated cost of the postOp
+    // calculated cost of the postOp
     uint256 public constant COST_OF_POST = 35000;
 
     IOracle private constant NULL_ORACLE = IOracle(address(0));
@@ -41,7 +50,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     mapping(address => uint256) public unlockBlock;
 
     constructor(IEntryPoint _entryPoint) BasePaymaster(_entryPoint) {
-        //owner account is unblocked, to allow withdraw of paid tokens;
+        // owner account is unblocked, to allow withdraw of paid tokens;
         unlockTokenDeposit();
     }
 
@@ -61,7 +70,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
         _burn(msg.sender, uint256(uint160(token)), liquidity);
 
         // withdraw from aave
-        _withdraw(token, msg.sender, amount);
+        _withdraw(token, amount, msg.sender);
 
         // try to withdraw from aave
         // if not enough, then withdraw from entrypoint
@@ -72,7 +81,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
      * owner of the paymaster should add supported tokens
      */
     function addToken(IERC20 token, IOracle tokenPriceOracle) external onlyOwner {
-        require(oracles[token] == NULL_ORACLE, "Token already set");
+        if (oracles[token] != NULL_ORACLE) revert TokenAlreadySet();
         oracles[token] = tokenPriceOracle;
     }
 
@@ -89,7 +98,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     function addDepositFor(IERC20 token, address account, uint256 amount) external {
         //(sender must have approval for the paymaster)
         token.safeTransferFrom(msg.sender, address(this), amount);
-        require(oracles[token] != NULL_ORACLE, "unsupported token");
+        if (oracles[token] == NULL_ORACLE) revert UnsupportedToken();
         balances[token][account] += amount;
         if (msg.sender == account) {
             lockTokenDeposit();
@@ -129,10 +138,9 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
      * @param amount amount to withdraw
      */
     function withdrawTokensTo(IERC20 token, address target, uint256 amount) public {
-        require(
-            unlockBlock[msg.sender] != 0 && block.number > unlockBlock[msg.sender],
-            "DepositPaymaster: must unlockTokenDeposit"
-        );
+        if (unlockBlock[msg.sender] == 0 || block.number <= unlockBlock[msg.sender]) {
+            revert NotUnlocked();
+        }
         balances[token][msg.sender] -= amount;
         token.safeTransfer(target, amount);
     }
@@ -151,7 +159,7 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
         returns (uint256 requiredTokens)
     {
         IOracle oracle = oracles[token];
-        require(oracle != NULL_ORACLE, "DepositPaymaster: unsupported token");
+        if (oracle == NULL_ORACLE) revert UnsupportedToken();
         return oracle.getTokenValueOfEth(ethBought);
     }
 
@@ -169,17 +177,17 @@ contract GeneralPaymaster is BasePaymaster, ERC1155, AaveFundsManager {
     {
         (userOpHash);
         // verificationGasLimit is dual-purposed, as gas limit for postOp. make sure it is high enough
-        require(userOp.verificationGasLimit > COST_OF_POST, "DepositPaymaster: gas too low for postOp");
+        if (userOp.verificationGasLimit <= COST_OF_POST) revert GasTooLow();
 
         bytes calldata paymasterAndData = userOp.paymasterAndData;
-        require(paymasterAndData.length == 20 + 20, "DepositPaymaster: paymasterAndData must specify token");
+        if (paymasterAndData.length != 20 + 20) revert TokenNotSpecified();
         IERC20 token = IERC20(address(bytes20(paymasterAndData[20:])));
         address account = userOp.getSender();
         uint256 maxTokenCost = getTokenValueOfEth(token, maxCost);
         uint256 gasPriceUserOp = userOp.gasPrice();
-        require(tokenETHBalance[token] >= maxCost, "DepositPaymaster: not enough ETH in paymaster");
-        require(unlockBlock[account] == 0, "DepositPaymaster: deposit not locked");
-        require(balances[token][account] >= maxTokenCost, "DepositPaymaster: deposit too low");
+        if (tokenETHBalance[token] < maxCost) revert InsufficientETH();
+        if (unlockBlock[account] != 0) revert NotLocked();
+        if (balances[token][account] < maxTokenCost) revert InsufficientDeposit();
         return (abi.encode(account, token, gasPriceUserOp, maxTokenCost, maxCost), 0);
     }
 

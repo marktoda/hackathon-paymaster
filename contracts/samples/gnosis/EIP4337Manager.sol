@@ -182,7 +182,7 @@ contract EIP4337Manager is IAccount, GnosisSafeStorage, Executor {
             try EIP4337Fallback(module).eip4337manager() returns (address _manager) {
                 return (prev, _manager);
             } // solhint-disable-next-line no-empty-blocks
-            catch {}
+                catch {}
             prev = module;
         }
         return (address(0), address(0));
